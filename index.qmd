@@ -348,6 +348,8 @@ Vi kan løse dette problem ved hjælp af tre forskellige standard-metoder:
 
 ## `Tied data`: Efron 
 
+::: {style="font-size: 75%;"}
+
 Når flere personer oplever hændelsen i samme tidsinterval, kaldes det for tied data. Efron-metoden håndterer dette ved at tage højde for alle mulige rækkefølger (***rank orderings***) af de hændelser, der sker på samme tid. På den måde justeres, hvor meget de “tied” hændelser bidrager til den samlede likelihood-funktion når vi estimerer vores model.
 
 Vi udtrykke med denne metode udtrykke hazardfunktion ved en distinkt tid $t_{(i)}$​ med tied events som:
@@ -356,7 +358,7 @@ $$
 h_{a}(t_{(i)}) = \frac{\sum_{j=1}^{d_i} \delta_{ij}}{\sum_{j \in R(t_{(i)})} \sum_{k=1}^{d_k} \exp(X_j'\beta) \times \delta_{ik}}
 $$
 
-hvor 
+hvor, 
 
 - $h_{a}(t_{(i)})$ er den kontrollerede/justerede hazard funktion ved $t_{(i)}$,
 - $t_{(i)}$ er den distinkte tid, hvor hændelser opstå, 
@@ -367,6 +369,8 @@ hvor
 - $\delta_{ij}$ er en dummy, der indikerer hvis individ $j$ oplevede begivenheden ved $t_{(i)}$ (1) eller ej (0),
 - $X_{j}$ er en vector af covariater for individ $j$, 
 - $\beta$ er en vector af coeficcienter fra Cox PH modellen.
+
+:::
 
 ## `Tied data`: Efron 
 
@@ -422,129 +426,65 @@ $$
 
 Her ophæves $h_{0}(t)$ fortsat, men fordi $x_{i}(t)$ og $x_{j}(t)$ kan ændre sig over tid, bliver ***HR*** nu afhængig af tidspunktet:
 
-Med andre ord, hazardratioen bliver afhængig af tidspunktet og kan variere over tid, hvis de tidsvarierende variable for de to personer ændrer sig:
+Med andre ord, hazardratioen bliver afhængig af tidspunktet og kan variere over tid, hvis de tidsvarierende variable for de to personer ændrer sig. ***HR*** mellem to personer vil på ethvert givent tidspunkt være:
 
 $$
-\hat{HR} = \exp\left(\beta \left[x_i(t) - x_j(t)\right]\right)
+\hat{HR}(t) = \exp\left(\beta \left[x_i(t) - x_j(t)\right]\right)
 $$
 
 Det betyder, at hazard-ratioen i denne situation bliver tidsafhængig, fordi den afhænger af, hvordan den tidsvarierende variabel adskiller sig mellem personerne på et givet tidspunkt.
 
-## Cox PH med tidsvariende variable: proportionalitet?
+## Cox PH med tidsvariende variable: proportionalitet, en sidste gang ... 
 
-::: {.columns} 
+Forudsætningen er, fortsat, at effekten af en covariant ($\beta$) er konstant over tid, selvom vi har en Cox-model med tidsvarierende covariater. Derfor: selvom værdien af en covariat $x(t)$ ændrer sig med tiden, antages en enheds ændring i $x(t)$ at have den samme **multiplikative effekt på risikoen** (hazard) uanset tidspunktet.
 
-::: {.column width="50%"}
+${HR}(t)$ er altså den **tidsafhængige** hazard-ratio, fordi $x(t)$ for person $i$ og $j$ kan ændre sig med tiden. Proportionalitetsantagelsen betyder at $\beta$---og dermed effekten af forskellen $x_{i}(t)−x_{j}​(t)$---er konstant over tid. Det vil sige, at hvis person $A$ og person $B$ har forskellige værdier på $x$, antager modellen, at den relative forskel i risiko for begivenheden, forårsaget af forskellen i $x$, er den samme på ethvert tidspunkt.
 
-```{r}
-#| echo: true
-#| code-fold: true
-#| code-summary: "klik for at se koden"
-#| out-width: 80%
+## Cox PH med tidsvariende variable: proportionalitet, en sidste gang ... 
 
-library(tidyverse)
+::: {style="font-size: 50%;"}
 
-# Tid
-t <- seq(0, 10, by = 0.1)
+Hvis vi vil vide hvor lang tid det tager for par at få deres første barn. I denne analyse er "tiden" ofte kvindens alder eller tiden siden, vi begyndte at observere hende. En oplagt uafhængig variabel i studiet af denne risiko kunne være antal timer arbejde per uge (måske en proxy for potentiel stress?). 
 
-# Beta: effekten af covariaten
-beta <- 0.5
+Vi definerer denne tidsvarierende covariat $timearbejde(t)$ således:
 
-# Tidsvarierende covariater for de to grupper:
-# Gruppe i: x_i(t) = 1 + 0.1*t
-# Gruppe j: x_j(t) = 1 + 0.05*t
-x_i <- 1 + 0.1 * t
-x_j <- 1 + 0.05 * t
+$$
+\begin{aligned}
+    timearbejde &=0, \text{hvis personen arbejder } 37 \text{ timer}, \\
+    timearbejde &=1, \text{hvis personen arbejder mindre}
+\end{aligned}
+$$
 
-# Beregn hazard for hver gruppe:
-h_i <- h0 * exp(beta * x_i)  # Hazard for gruppe i
-h_j <- h0 * exp(beta * x_j)  # Hazard for gruppe j
+Dermed er hazardfunktionen i vores Cox-model for en kvinde ved tiden $t$ er givet ved:
 
-# Opret en tibble med data
-df <- tibble(
-  tid = t,
-  h0 = 0.1 + 0.05 * sin(t),
-  `i` = h_i,
-  `j` = h_j,
-  HR = exp(beta * (x_i - x_j))
-)
+$$
+h(t|timearbejde) = h_{0}(t) \times \exp(\beta \times timearbejde(t)) 
+$$
 
-# Omform data til long format til ggplot
-df_long <- df %>% pivot_longer(cols = c("i", "j"),
-                               names_to = "Gruppe",
-                               values_to = "Hazard")
 
-# Plot:
-p1 <- ggplot(df_long, aes(x = tid, y = Hazard, color = Gruppe)) +
-  geom_line(size = 1.2) +
-  labs(title = "Hazardfunktioner over tid for to grupper",
-       x = "Tid",
-       y = "Hazard") +
-  theme_minimal()
+Hvor,
 
-p1
+- $h_{0}​(t)$ baseline hazard: den grundlæggende risiko for at føde første barn ved tiden $t$ for en referencekvinde (en kvinde, der arbejder normal fuldtid, altså $timearbejde(t)=0$).
 
-```
+- $\exp(\beta)$ repræsenterer den **relative effekt** af at arbejde mindre end normal fuldtid.
+
+- Hvis vi forstiller os at $\exp(\beta) = 2$, betyder det, at på ***ethvert givet tidspunkt*** har en kvinde, der arbejder mindre end normal fuldtid, dobbelt så høj risiko for at føde sit første barn sammenlignet med en kvinde, der er arbejder normal fuldtid.
+
+- Proportionalitetsantagelsen siger i denne sammenhæng, at denne **relative effekt**, den multiplikative faktor $exp(\beta)$, er konstant over tid, selvom den absolutte risiko, $h_{0}​(t)$ antages at ændre sig med kvindens alder. Det vil sige, at den konstante hazard-ratio forbliver den samme på alle tidspunkter, hvis vi antager, at den eneste forskel mellem kvinder (og deres "risiko" for at få første barn) er hvor længe de arbejder: 
+
+$$
+\frac{h(t|\text{partnerstatus}(t)=1)}{h(t|\text{partnerstatus}(t)=0)} = \exp(\beta)
+$$
 
 :::
 
-::: {.column width="50%"}
+## Cox PH med tidsvariende variable: tolkning
 
-```{r}
-#| echo: true
-#| code-fold: true
-#| code-summary: "klik for at se koden"
-#| out-width: 80%
+- Outputtet er på en log-skala, fordi modellen er log-lineær. Vi eksponentierer for at få direkte tolkbare hazard rations (den multiplikative ændring i risikoen). 
 
-library(tidyverse)
+- $\beta$ er koefficienten, som angiver ændringen i den logaritmiske hazardrate for en enheds ændring i covariaten (log-hazard ratioer). Log-skalaer er ofte svære at formindle, da de ikke nødvendigvis er intuitive. 
 
-# Tid
-t <- seq(0, 10, by = 0.1)
-
-# Beta: effekten af covariaten
-beta <- 0.5
-
-# Tidsvarierende covariater for de to grupper:
-# Gruppe i: x_i(t) = 1 + 0.1*t
-# Gruppe j: x_j(t) = 1 + 0.05*t
-x_i <- 1 + 0.1 * t
-x_j <- 1 + 0.05 * t
-
-# Beregn hazard for hver gruppe:
-h_i <- h0 * exp(beta * x_i)  # Hazard for gruppe i
-h_j <- h0 * exp(beta * x_j)  # Hazard for gruppe j
-
-# Opret en tibble med data
-df <- tibble(
-  tid = t,
-  h0 = 0.1 + 0.05 * sin(t),
-  `i` = h_i,
-  `j` = h_j,
-  HR = exp(beta * (x_i - x_j))
-)
-
-# Omform data til long format til ggplot
-df_long <- df %>% pivot_longer(cols = c("i", "j"),
-                               names_to = "Gruppe",
-                               values_to = "Hazard")
-
-# Plot: 
-p2 <- ggplot(df, aes(x = tid, y = HR)) +
-  geom_line(color = "green", size = 1.2) +
-  labs(
-    title = "Tidsvarierende Hazard Ratio",
-    x = "Tid",
-    y = "Hazard Ratio, HR(t)"
-  ) +
-  theme_minimal()
-
-p2
-
-```
-
-:::
-
-:::
+- Fx.: $\exp(\beta) = 1.5$ betyder, at risikoen stiger med 50% for én enheds stigning i covariaten.
 
 ## Cox PH med tidsvariende variable: Data 
 
@@ -802,7 +742,7 @@ cox.model2 <- coxph(Surv(start, slut, event) ~ covariater, method = "efron", dat
 
 Dette kalder vi også for et `Counting process` argument. 
 
-Her angives start og sluttiden for det enkelte interval, samt event (1=hændelse og 0=censurering). Intervallets størrelse afgøres af hvor hyppigt de tidsvarierende variable kan skifte værdi. Værdien skal være konstant inden for det enkelte interval. Denne lille ændring gør det muligt at håndtere tidsvarierende variable i cox-regressionen
+Her angives start og sluttiden for det enkelte interval, samt event (1=hændelse og 0=ikke-hændelse/censurering). Intervallets størrelse afgøres af hvor hyppigt de tidsvarierende variable kan skifte værdi. Værdien skal være konstant inden for det enkelte interval. Denne lille ændring gør det muligt at håndtere tidsvarierende variable i cox-regressionen. 
 
 ## Dagens øvelse: data
 
@@ -822,24 +762,39 @@ load("//Volumes//oecon-forloeb24//Råfiler//Forlob_14032023.rda")
 - 1 % af alle individer fundet i IDAP igennem perioden 1980-2010
 
 **Reduktion**:
+
 - Data indeholder personer, der er fyldt 10 år mellem 1980-1990
+
 - Personer, der får børn før de er fyldt 18 år er taget ud af data (56 personer)
+
 - Kun personer, der er til stede i DK, det år de bliver 18 år.
+
 - Årlige observationer af disse personer
 
 ## Øvelse - Første barn, fortsat
 
 1. Diskutér de forskellige variable i datasættet: 
+
   - Er de tidsvarierende eller ej? 
+  
   - Vil det give mening at behandle nogle af variablene som faste (værdien på en tidsvarierende variable ved forløbets start) 
+
 2. Gør Forlob-datasættet klar til analyse
+
   - Vær opmærksom på variabeltyperne (chr, num og factor) og hvordan I bruger dem i analysen 
-  - ALDER er en character variable
+  
 3. Sæt udgangspunktet for forløbet til at være året, hvor personerne er 18 år
+
 4. Smid irrelevante observationsrække ud af datasættet (relevante obs er fra det 18. år frem til og med intervallet, hvor hændelsen sker eller observationen af personen slutter)
+
 5. Vælg minimum tre variable til analysen af problemstillingen (minimum 1 tidsvarierende)
+
 6. Lav indledende KM analyser for at undersøge forskelle mellem grupper.     
+
     – plot KM-analyserne     
-    – Husk at begrænse datasættet til den sidste observation!     
+
+    – Husk at begrænse datasættet til den sidste observation!  
+
 7. Lav en cox-regression, hvor tidsvarierende variable (mindst en) indgår, og fortolk resultaterne.
-    - Diskuter outputtet. Hvad giver mest mening at tolke på, coef eller exp(coef), hvorfor?
+
+    - Diskuter outputtet. Forklar herunder hvilke output i tolker, coef eller exp(coef), og hvorfor I gør det. 
