@@ -29,7 +29,7 @@ options(scipen = 999)
   - Opsummering på sidste gang uden tidsvarierende variable. 
 - Introduktion til tidsvarierende variable.
 - Introduktion og diskussion af data i forlængelse af sidste lektion. 
-- Cox-regression med tidsvarierende variable (`counting process argument`).
+- Cox-regression med tidsvarierende variable.
 - Øvelser.
 
 ## Forventet udbytte
@@ -45,7 +45,7 @@ options(scipen = 999)
 
 ### *Færdigheder*
 
--   Kodning af counting process tid i et long format: `subject-period file` (eller `person-period data`).
+-   Kodning af counting process tid i et "langt format" for en `subject-period file`.
 -   Datamanagement på registerdata.
 
 :::
@@ -58,6 +58,10 @@ options(scipen = 999)
 :::
 <!--  ------------------------------------------->
 :::
+
+## Opsummering
+
+> *Spg.*: Hvad er forskellen(e) på `KM` og `Cox PH`
 
 ## Cox PH: `fixed` covariater 
 
@@ -76,7 +80,7 @@ $$
 h_{i}(t) = \;\;\; \textcolor{red}{h_{0}(t)} \;\;\; \times e^{\beta_{1} x_{1} + \dots + \beta_{k} x_{k}}
 $$
 
-<span style="color:red;"> $h_{0}(t)$ er **baseline hazard**, der ikke bliver specificeret *a priori*. Dvs. det er en semi-parametrisk model. Bemærk at der ikke er noget egentlig intercept, da dette er "absoberet" i **baseline hazard**, som er en funktion af tiden, der bliver ophævet i estimeringen af ligningen (se slides fra forrige lektion).  </span>
+<span style="color:red;"> $h_{0}(t)$ er **baseline hazard** ved tiden $t$ for en referenceperson (en person med $x=0$). Baseline hazard specificeres ikke på forhånd, hvilket gør modellen `semi-parametrisk`. Bemærk, at der ikke er et separat intercept, fordi denne information er "absorberet" i $h0(t)$. (Se også slides fra forrige lektion).  </span>
 
 ## Cox PH: `fixed` covariater 
 
@@ -87,9 +91,9 @@ $$
 h_{i}(t) = h_{0}(t) \times \;\;\; \textcolor{yellow}{e^{\beta_{1} x_{1} + \dots + \beta_{k} x_{k}}} \;\;\; 
 $$
 
-<span style="color:red;"> $h_{0}(t)$ er **baseline hazard**, der ikke bliver specificeret *a priori*. Dvs. det er en `semi-parametrisk` model. Der ikke et egentlig `intercept`, da dette er "absoberet" i **baseline hazard**, som er en funktion af tiden, der bliver ophævet i estimeringen af ligningen (se slides fra forrige lektion).  </span>
+<span style="color:red;"> $h_{0}(t)$ er **baseline hazard** ved tiden $t$ for en referenceperson (en person med $x=0$). Baseline hazard specificeres ikke på forhånd, hvilket gør modellen `semi-parametrisk`. Bemærk, at der ikke er et separat intercept, fordi denne information er "absorberet" i $h_{0}(t)$. (Se også slides fra forrige lektion). </span>
 
-<span style="color:yellow;"> $e^{\beta_{k} x_{k}}$ er en lineær funktion af $k$ eksponentierede covariater. Afhænger ikke af tiden men effekten er tidskonstant. </span>
+<span style="color:yellow;"> $e^{\beta_{k} x_{k}}$ angiver effekten af de $k$ covariater. Effekten er *konstant* over tid og multiplicerer (på) baseline hazard for at give den samlede risiko for den enkelte person med specifikke værdier for covariaterne. </span>
 
 ## Cox PH: `forudsætninger` 
 
@@ -101,7 +105,7 @@ $$
 h_{i}(t) = \theta h_{j}(t)
 $$
 
-Derfor, ved sammenligning af hazard-raterne for to personer ($i$ og $j$) på sammentidspunkt gælder det for hazard-`ration` at: 
+Derfor: *ved sammenligning af hazard-raterne for to personer ($i$ og $j$) på sammentidspunkt gælder det for hazard-`ration` at*: 
 
 $$
 \hat{HR} = 
@@ -111,7 +115,7 @@ hvor $\theta$ er en konstant.
 
 ## Cox PH: `Hazard-ration` 
 
-Hazard-ratioen er forholdet mellem hazard-raten for den $i$'ende person udenfor referencegruppen og en person ($j$) i referencegruppen:
+Hazard-ratioen sammenligner risikoen for en begivenhed for en person uden for referencegruppen ($i$) med en person i referencegruppen ($j$), udtrykt som:
 
 $$
 \require{cancel}
@@ -119,30 +123,24 @@ HR =
 \frac{h_{i}(t)}{h_{j}(t)} = \frac{ h_{0}(t) \times \text{exp}(\beta)}{h_{0}(t)} = \frac{ \cancel{h_{0}(t)}  \times \text{exp}(\beta)}{\cancel{h_{0}(t)}} = \text{exp}(\beta)
 $$
 
-Konceptuelt lig Odds Ratio (***OR***) som i kender fra logistisk regression. 
+Bemærk at $h_{0}(t)$ ophæves, så ***HR*** kun afhænger af $\text{exp}(\beta)$. Dette svarer konceptuelt til, hvordan Odds Ratio (OR) fungerer i logistisk regression.
 
-- Hvis ***HR*** er $=1$ har den $i$'ende person `samme` *HR* som $j$'ende person i referencegruppen.
+- Hvis ***HR*** er $=1$ har personen uden for referencegruppen samme risiko som personen i referencegruppen.
 
-- Hvis ***HR*** er $<1$ har den $i$'ende person `mindre` *HR* som $j$'ende person i referencegruppen.
+- Hvis ***HR*** er $<1$ er risikoen lavere for personen uden for referencegruppen.
 
-- Hvis ***HR*** er $>1$ har den $i$'ende person `større` *HR* som $j$'ende person i referencegruppen.
+- Hvis ***HR*** er $>1$ er isikoen højere for personen uden for referencegruppen.
 
-Derfor, **forholdet mellem hazardraten for den $i$'ende person udenfor referencegruppen og en person ($j$) i referencegruppen her alene afhænger af baggrundsvariablen.**
-
-Det betyder dermed også at fordi det er en `ratio` er det **odds** og ikke **sandsynligheder** der bliver udtrykt. 
+Da ***HR*** er et forhold (en `ratio`), udtrykker den odds---ikke direkte sandsynligheder.
 
 
 ## Cox PH: `Hazard-ration` og proportionalitet 
 
-Hazard-ratioen er forholdet mellem hazard-raten for den $i$'ende person udenfor referencegruppen og en person ($j$) i referencegruppen:
+::: {style="font-size: 75%;"}
+I første figur ses en situation, hvor den estimerede hazard-ratio er konstant over tid, altså $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} = \theta$. I det andet plot varierer den estimerede hazard-ratio *ikke-proportionelt* over tid, så $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} \neq \theta$. 
 
-$$
-\require{cancel}
-HR = 
-\frac{h_{i}(t)}{h_{j}(t)} = \frac{ h_{0}(t) \times \text{exp}(\beta)}{h_{0}(t)} = \frac{ \cancel{h_{0}(t)}  \times \text{exp}(\beta)}{\cancel{h_{0}(t)}} = \text{exp}(\beta)
-$$
-
-Som vi kan se gælder det i første figur at: $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} = \theta$, mens det i det andet plot gælder at $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} \neq \theta$. Bemærk at hazard raten ikke behøves at være konstant, da styrken ved Cox er at den er semi-parametrisk og kan håndtere forskellige **pdf**--ration skal bare være proportionel mellem de to grupper. Dvs. den kan godt varierer over tid, så længe variationen er "spejlet" i begge grupper. 
+Den centrale pointe her er at den absolutte hazard-rate $h(t)$ kan ændre sig over tid, fordi Cox-modellen er semi-parametrisk og kan tilpasses data med forskellige sandsynlighedstæthedsfunktioner (**pdf**). Det afgørende er, at forholdet mellem hazardene for de to grupper---`hazard-ratioen`---skal være **proportional**. Det betyder, at selvom den samlede risiko (hazardraten) kan variere over tid, skal variationen være ens for begge grupper, så sammenligningen mellem dem (***HR***) forbliver konstant.
+:::
 
 ::: {.columns} 
 
@@ -152,37 +150,32 @@ Som vi kan se gælder det i første figur at: $\hat{HR} = \frac{h_{i}(t)}{h_{j}(
 #| echo: true
 #| code-fold: true
 #| code-summary: "klik for at se koden"
+#| out-width: 80%
 
-library(survival)
 library(tidyverse)
 
-# Konstruer random data
-set.seed(123) # Betyder vi får samme data
-n <- 1000 # Antal obs.
-Tid <- rexp(n, rate = 0.05) # Tidsenhed
-Begivenhed <- rbinom(n, size = 1, prob = 0.7) # Angiver hændelser, rate = 70%
-Gruppe <- factor(sample(1:2, size = n, replace = TRUE)) # Dummy-indikator for gruppetilhørsforhold
+# Tid:
+t <- seq(0, 10, by = 0.1)
 
-# Fit en Cox PH model
-cox_model <- coxph(Surv(Tid, Begivenhed) ~ Gruppe)
+# beta-værdien: effekten af covariaten, k:
+beta <- 0.5
 
-# Saml data i en df
-plot_data <- crossing(
-  Tid = seq(0, max(Tid), length.out = 100),
-  Gruppe = levels(Gruppe)
+# dataframe:
+df <- tibble(
+  time = t,
+  h0 = 0.1 + 0.05 * sin(t), # Baseline hazard
+  h1 = h0 * exp(beta),      # Hazard for gruppe i
+  HR = h1 / h0              # Hazard-ratio mellem i og j
 )
 
-# Prediktér hazard funktionen, under antagelse af PH, som vi vil plotte
-plot_data <- plot_data %>%
-  mutate(hr_cox = predict(cox_model, newdata = ., type = "risk"))
-
-# Plot hazard funktionen
-ggplot(plot_data, aes(x = Tid, y = hr_cox, color = Gruppe)) +
-  geom_line() +
-  labs(title = "Hazard Funktion for to grupper med proportional effekt",
-       x = "Tid",
-       y = "Hazard rate") +
+# Plot:
+p1 <- ggplot(df, aes(x = time)) +
+  geom_line(aes(y = h0, color = "j"), size = 1.2) +
+  geom_line(aes(y = h1, color = "i"), size = 1.2) +
+  labs(x = "Time", y = "Hazard", title = "Proportionale Hazardfunktioner", color = "Gruppe") +
   theme_minimal()
+
+p1
 
 ```
 
@@ -194,24 +187,139 @@ ggplot(plot_data, aes(x = Tid, y = hr_cox, color = Gruppe)) +
 #| echo: true
 #| code-fold: true
 #| code-summary: "klik for at se koden"
+#| out-width: 80%
 
 library(tidyverse)
-library(survival)
 
-# Introducér ikke-PH ved at tilføje en tids-afhængig effekt.  
-plot_data <- plot_data %>%
-  mutate(
-    hr_non_proportional = hr_cox,
-    hr_non_proportional = if_else(Gruppe == 2, hr_cox * exp(0.01 * Tid), hr_non_proportional)
-  )
+# Tid:
+t <- seq(0, 10, by = 0.1)
 
-# Plot hazard funktionen med ikke-proportionel effekt 
-ggplot(plot_data, aes(x = Tid, y = hr_non_proportional, color = Gruppe)) +
-  geom_line() +
-  labs(title = "Hazard Funktion for to grupper med ikke-proportional effekt",
-       x = "Tid",
-       y = "Hazard rate") +
+# Baseline hazard-funktion for referencegruppen, j:
+h0 <- 0.1 + 0.05 * sin(t)
+
+# Beta (effekten) + "gamma" (en tidsafhængig effekt der varierer over tid):
+beta <- 0.5
+gamma <- 0.2
+
+# Hazard-funktion for gruppe i med tidsafhængig ikke-proportional effekt:
+h2 <- h0 * exp(beta + gamma * t)
+
+# Hazard-ratioen:
+HR <- h2 / h0  # Dette svarer til exp(beta + gamma*t) ... altså, jeg har lavet en teoretisk funktion, der er ikke-proportionel over tid:
+
+# Dataframe:
+df <- tibble(
+  time = t,
+  h0 = h0,
+  h2 = h2,
+  HR = HR
+)
+
+# Plot:
+p1 <- ggplot(df, aes(x = time)) +
+  geom_line(aes(y = h0, color = "j"), size = 1.2) +
+  geom_line(aes(y = h2, color = "i"), size = 1.2) +
+  labs(x = "Tid", y = "Hazard", title = "Ikke-Proportionale Hazardfunktioner", color = "Gruppe") +
   theme_minimal()
+
+p1
+
+```
+
+:::
+
+:::
+
+## Cox PH: `Hazard-ration` og proportionalitet 
+
+::: {style="font-size: 75%;"}
+I første figur ses en situation, hvor den estimerede hazard-ratio er konstant over tid, altså $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} = \theta$. I det andet plot varierer den estimerede hazard-ratio *ikke-proportionelt* over tid, så $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} \neq \theta$. 
+
+Bemærk også at proportionalitet betyder, at forholdet (***HR***) mellem de to hazardfunktioner *forbliver konstant over tid* (i.e., den ekstra risiko, der tilføjes af covariat-effekten, $\exp(\beta)$, i forhold til baseline), men det betyder ikke, at *afstanden (den absolutte forskel) mellem dem er konstant*. Eftersom $h_{​0}(t)$ kan variere over tid, kan den absolutte forskel også variere. Derfor: selvom $\beta$ bliver eksponentieret og dermed giver et konstant forhold mellem grupper, kan afstanden mellem linjerne (funktionerne) være større, *når den underliggende baseline hazard er højere*.
+:::
+
+::: {.columns} 
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "klik for at se koden"
+#| out-width: 80%
+
+library(tidyverse)
+
+# Tid:
+t <- seq(0, 10, by = 0.1)
+
+# beta-værdien: effekten af covariaten, k:
+beta <- 0.5
+
+# dataframe:
+df <- tibble(
+  tid = t,
+  h0 = 0.1 + 0.05 * sin(t), # Baseline hazard
+  h1 = h0 * exp(beta),      # Hazard for gruppe i
+  HR = h1 / h0              # Hazard-ratio mellem i og j
+)
+
+# Plot:
+p1 <- ggplot(df, aes(x = tid)) +
+  geom_line(aes(y = h0, color = "j"), size = 1.2) +
+  geom_line(aes(y = h1, color = "i"), size = 1.2) +
+  labs(x = "Tid", y = "Hazard", title = "Proportionale Hazardfunktioner", color = "Gruppe") +
+  theme_minimal()
+
+p1
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "klik for at se koden"
+#| out-width: 80%
+
+library(tidyverse)
+
+# Tid:
+t <- seq(0, 10, by = 0.1)
+
+# Baseline hazard-funktion for referencegruppen, j:
+h0 <- 0.1 + 0.05 * sin(t)
+
+# Beta (effekten) + "gamma" (en tidsafhængig effekt der varierer over tid):
+beta <- 0.5
+gamma <- 0.2
+
+# Hazard-funktion for gruppe i med tidsafhængig ikke-proportional effekt:
+h2 <- h0 * exp(beta + gamma * t)
+
+# Hazard-ratioen:
+HR <- h2 / h0  # Dette svarer til exp(beta + gamma*t) ... altså, jeg har lavet en teoretisk funktion, der er ikke-proportionel over tid:
+
+# Dataframe:
+df <- tibble(
+  tid = t,
+  h0 = h0,
+  h2 = h2,
+  HR = HR
+)
+
+# Plot:
+p1 <- ggplot(df, aes(x = tid)) +
+  geom_line(aes(y = h0, color = "j"), size = 1.2) +
+  geom_line(aes(y = h2, color = "i"), size = 1.2) +
+  labs(x = "Tid", y = "Hazard", title = "Ikke-Proportionale Hazardfunktioner", color = "Gruppe") +
+  theme_minimal()
+
+p1
+
 ```
 
 :::
@@ -220,22 +328,22 @@ ggplot(plot_data, aes(x = Tid, y = hr_non_proportional, color = Gruppe)) +
 
 ## `Tied data` 
 
-`Tied data` er almindelige i overlevelsesanalyse da vores tidsenhed typisk er **diskret**. Det betyder at der vil være flere hændelser/begivenheder/event i det samme tidsinterval. *Men*, det er principielt i uoverensstemmelse med den klassiske antagelse om uafhængighed mellem observationer, og kan derfor resultere i biased estimater og forkerte standardfejl, der har konsekvenser og validiteten af statistisk inferens. 
+Tied data opstår ofte i overlevelsesanalyser, fordi vi typisk måler tid i **diskrete enheder**. Det betyder, at *flere hændelser kan ske i samme tidsinterval*. Denne situation bryder med antagelsen om, at **alle observationer er uafhængige**, og kan derfor føre til bias i estimater og standardfejl, som påvirker validiteten af vores statistiske konklusioner.
 
 Vi kan løse dette problem ved hjælp af tre forskellige standard-metoder: 
 
-- `Breslow`: god lille datasæt og få ties. 
+- `Breslow`: Velegnet til "små" datasæt med få ties.
 
-- `Efron`: håndterer bedre mange ties.
+- `Efron`: Klarer bedre mange ties.
 
-- `Exact`: den bedste metode, men mest computerkrævende.
+- `Exact`: Den mest nøjagtige metode, men også den mest beregningstunge (computerkrævende).
 
 
 ## `Tied data`: Efron 
 
-Efron--*eller tied-discrete*--håndterer "tied event" ved at tage alle mulige rangeringer (*rank orderings*) af forbundne "failure times" inden for et sæt af forbundne observationer i betragtning. Denne metode justerer hvor meget forbundne begivenheder bidrager til likelihood funktionen.
+Når flere personer oplever hændelsen i samme tidsinterval, kaldes det for tied data. Efron-metoden håndterer dette ved at tage højde for alle mulige rækkefølger (***rank orderings***) af de hændelser, der sker på samme tid. På den måde justeres, hvor meget de “tied” hændelser bidrager til den samlede likelihood-funktion når vi estimerer vores model.
 
-Ved anvendelse af Efron-metode kan vi bestemme hazard funktionen som: 
+Vi udtrykke med denne metode udtrykke hazardfunktion ved en distinkt tid $t_{(i)}$​ med tied events som:
 
 $$
 h_{a}(t_{(i)}) = \frac{\sum_{j=1}^{d_i} \delta_{ij}}{\sum_{j \in R(t_{(i)})} \sum_{k=1}^{d_k} \exp(X_j'\beta) \times \delta_{ik}}
@@ -243,32 +351,31 @@ $$
 
 hvor 
 
-- $h_{a}$ er den kontrollerede hazard funktion,
-- $i$ er indekset for den distinkte begivenhedstider, $t_{(i)}$, 
+- $h_{a}(t_{(i)})$ er den kontrollerede/justerede hazard funktion ved $t_{(i)}$,
+- $t_{(i)}$ er den distinkte tid, hvor hændelser opstå, 
 - $j$ er indekset for individer som oplevede begivenheden ved $t_{(i)}$, 
 - $d_{i}$ er antallet af individer der oplevede begivenheden ved tid $t_{(i)}$, 
-- $R(t_{(i)})$ er `risikosættet` før $t_{(i)}$, der anvendes til at bestemme hazard funktionen ved $t_{(i)}$, 
-- $k$ er indekset for individer i `risikosættet`, $R(t_{(i)})$, før $t_{(i)}$, 
+- $R(t_{(i)})$ er `risikosættet` før $t_{(i)}$, 
+- $k$ er indekset for individer $i$ `risikosættet`, $R(t_{(i)})$, før $t_{(i)}$, 
 - $\delta_{ij}$ er en dummy, der indikerer hvis individ $j$ oplevede begivenheden ved $t_{(i)}$ (1) eller ej (0),
 - $X_{j}$ er en vector af covariater for individ $j$, 
-- $\beta$ er en vector af coeficcienter i Cox PH modellen.
+- $\beta$ er en vector af coeficcienter fra Cox PH modellen.
 
 ## `Tied data`: Efron 
 
-Metoden tager alle mulige rangeringer af forbundne begivenheder i betragtning indenfor hvert sæt af forbundne begivenheder. Konkret justerer metoden hvor meget forbundne begivenheden bidrager til likelihood funktionen ved at summere, og i forlængelse normalisere, over alle mulige permutationer/rangeringer af forbundne begivenheder i et sæt af forbundne observationer. Vi kontrollerer derfor for den mulige usikkerhed ved at begivenheder er registreret som sammetidspunkt og for den potentielle tekniske tilstedeværelse af afhængighed mellem observationer. Outputtet er et "smoothed" estimat af hazard funktionen.  
-
-"Sættet" referer til en gruppe af individer, der oplevede en begivenhed ved det samme diskrete tidspunkt, og "alle mulige rangeringer referer til alle mulige måder vi kan sammensætte individerne i sættet. For eksempel: 
+Metoden tager højde for alle mulige rækkefølger af disse forbundne begivenheder inden for et givent tidsinterval. For eksempel: 
 
 - 3 personer, $A, B, C$, oplevede begivenheden ved $t=x$. 
-- Da vi arbejder med diskrete tidsenheder er der en række af mulige "korrekte" rækkefølger som A, B og C oplevede begivenheden i: 
-  - A først, så B, så C
-  - B, så C, så A, 
+- Da vi arbejder med diskrete tidsenheder er der en række af mulige "korrekte" rækkefølger som $A$, $B$ og $C$ oplevede begivenheden: 
+  - $A$ først, så $B$, så $C$
+  - $B$, så $C$, så $A$, 
   - osv. ...
+
+På den måde "glatter"/smoother vi estimatet af hazardfunktionen og kontrollerer for den usikkerhed, der opstår, når begivenheder registreres som værende samtidige og observationerne potentielt er afhængige.
 
 ## `Tied data`: Efron 
 
-Ved at tage alle mulige rangeringer af begivenheder for en gruppe, der oplevede begivenheden, indefor et diskret tidspunkt i betragtning, sikrer metoden en mere korrekt likelihood funktion: 
-
+Det vil sige, at vi overvejer alle mulige måder, de individer, der oplever begivenheden samtidigt, kan rangeres, hvilket justerer for den usikkerhed, der opstår ved tied data. Derfor får vi en mere præcis likelihood funktion, udtrykt som:
 
 $$
 L(\beta) = \prod_{i=1}^m \frac{\exp\left(\sum_{j \in R(t_{(i)})} X_j'\beta \right)^{d_i}}{\left[\sum_{j \in R(t_{(i)})} \exp(X_j'\beta) \right]^{d_i}}
@@ -385,7 +492,7 @@ library(tidyverse)
 library(readxl)
 library(gt)
 
-df.rå <- read_excel("//Users//jeppefl//Desktop//forløbs-kursus//R//eksempel_data.xlsx")
+df.rå <- read_excel("eksempel_data.xlsx")
 
 df.lagged <- 
   df.rå %>% 
@@ -466,7 +573,7 @@ library(tidyverse)
 library(readxl)
 library(gt)
 
-df.rå <- read_excel("//Users//jeppefl//Desktop//forløbs-kursus//R//eksempel_data.xlsx")
+df.rå <- read_excel("eksempel_data.xlsx")
 
 df.lagged <- 
   df.rå %>% 
@@ -543,7 +650,7 @@ For at `coxph()` funktionen kan tage tidsvarierende informationer er det (desvæ
 library(tidyverse)
 library(readxl)
 
-df.rå <- read_excel("//Users//jeppefl//Desktop//forløbs-kursus//R//eksempel_data.xlsx")
+df.rå <- read_excel("eksempel_data.xlsx")
 
 df.lagged <- 
   df.rå %>% 
