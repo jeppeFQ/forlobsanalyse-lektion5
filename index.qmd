@@ -1,0 +1,612 @@
+---
+title: "Event History Analysis III – Cox proportional hazard regression"
+encoding: "UTF-8"
+execute:
+  echo: false
+format:
+  revealjs:
+    slide-number: c
+    show-slide-number: print
+    embed-resources: true
+    self-contained-math: true
+    smaller: true
+    scrollable: true
+    theme: dark 
+    html-math-method:
+      method: mathjax
+      url: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML"
+    footer: "Jeppe F. Qvist | 13. marts 2025"
+---
+
+```{r}
+options(scipen = 999)
+```
+
+
+## Dagens program 
+
+- Cox-regression. 
+  - Opsummering på sidste gang uden tidsvarierende variable. 
+- Introduktion til tidsvarierende variable.
+- Introduktion og diskussion af data i forlængelse af sidste lektion. 
+- Cox-regression med tidsvarierende variable (`counting process argument`).
+- Øvelser.
+
+## Forventet udbytte
+
+::: {.columns} 
+<!--  ------------------------------------------->
+::: {.column width="60%"}
+### *Viden*
+
+-   Cox-regressionen og forudsætninger. 
+-   Counting process argument
+-   Tidsvarierende og tidskonstante variable
+
+### *Færdigheder*
+
+-   Kodning af counting process tid i et long format: `subject-period file` (eller `person-period data`).
+-   Datamanagement på registerdata.
+
+:::
+
+::: {.column width="40%"}
+### *Kompetancer*
+
+-   Analyse af Cox-regression i R med tidsvarierende variable.
+
+:::
+<!--  ------------------------------------------->
+:::
+
+## Cox PH: `fixed` covariater 
+
+Hazarden for den $i$'ende person til tiden $t$, er et produkt af to led i: 
+
+$$
+h_{i}(t)=h_{0}(t) \times e^{\beta_{1} x_{1} + \dots + \beta_{k} x_{k}}
+$$
+
+## Cox PH: `fixed` covariater 
+
+Hazarden for den $i$'ende person til tiden $t$, er et produkt af to led i: 
+
+$$
+\require{color}
+h_{i}(t) = \;\;\; \textcolor{red}{h_{0}(t)} \;\;\; \times e^{\beta_{1} x_{1} + \dots + \beta_{k} x_{k}}
+$$
+
+<span style="color:red;"> $h_{0}(t)$ er **baseline hazard**, der ikke bliver specificeret *a priori*. Dvs. det er en semi-parametrisk model. Bemærk at der ikke er noget egentlig intercept, da dette er "absoberet" i **baseline hazard**, som er en funktion af tiden, der bliver ophævet i estimeringen af ligningen (se slides fra forrige lektion).  </span>
+
+## Cox PH: `fixed` covariater 
+
+Hazarden for den $i$'ende person til tiden $t$, er et produkt af to led i: 
+
+$$
+\require{color}
+h_{i}(t) = h_{0}(t) \times \;\;\; \textcolor{yellow}{e^{\beta_{1} x_{1} + \dots + \beta_{k} x_{k}}} \;\;\; 
+$$
+
+<span style="color:red;"> $h_{0}(t)$ er **baseline hazard**, der ikke bliver specificeret *a priori*. Dvs. det er en `semi-parametrisk` model. Der ikke et egentlig `intercept`, da dette er "absoberet" i **baseline hazard**, som er en funktion af tiden, der bliver ophævet i estimeringen af ligningen (se slides fra forrige lektion).  </span>
+
+<span style="color:yellow;"> $e^{\beta_{k} x_{k}}$ er en lineær funktion af $k$ eksponentierede covariater. Afhænger ikke af tiden men effekten er tidskonstant. </span>
+
+## Cox PH: `forudsætninger` 
+
+Forudsætning for Cox ’s regressionsmodel er ***proportionalitet mellem hazard-raterne*** (den proportionale hazard model).
+
+For to grupper gælder det at: 
+
+$$
+h_{i}(t) = \theta h_{j}(t)
+$$
+
+Derfor, ved sammenligning af hazard-raterne for to personer ($i$ og $j$) på sammentidspunkt gælder det for hazard-`ration` at: 
+
+$$
+\hat{HR} = 
+\frac{h_{i}(t)}{h_{j}(t)} = \theta
+$$
+hvor $\theta$ er en konstant. 
+
+## Cox PH: `Hazard-ration` 
+
+Hazard-ratioen er forholdet mellem hazard-raten for den $i$'ende person udenfor referencegruppen og en person ($j$) i referencegruppen:
+
+$$
+\require{cancel}
+HR = 
+\frac{h_{i}(t)}{h_{j}(t)} = \frac{ h_{0}(t) \times \text{exp}(\beta)}{h_{0}(t)} = \frac{ \cancel{h_{0}(t)}  \times \text{exp}(\beta)}{\cancel{h_{0}(t)}} = \text{exp}(\beta)
+$$
+
+Konceptuelt lig Odds Ratio (***OR***) som i kender fra logistisk regression. 
+
+- Hvis ***HR*** er $=1$ har den $i$'ende person `samme` *HR* som $j$'ende person i referencegruppen.
+
+- Hvis ***HR*** er $<1$ har den $i$'ende person `mindre` *HR* som $j$'ende person i referencegruppen.
+
+- Hvis ***HR*** er $>1$ har den $i$'ende person `større` *HR* som $j$'ende person i referencegruppen.
+
+Derfor, **forholdet mellem hazardraten for den $i$'ende person udenfor referencegruppen og en person ($j$) i referencegruppen her alene afhænger af baggrundsvariablen.**
+
+Det betyder dermed også at fordi det er en `ratio` er det **odds** og ikke **sandsynligheder** der bliver udtrykt. 
+
+
+## Cox PH: `Hazard-ration` og proportionalitet 
+
+Hazard-ratioen er forholdet mellem hazard-raten for den $i$'ende person udenfor referencegruppen og en person ($j$) i referencegruppen:
+
+$$
+\require{cancel}
+HR = 
+\frac{h_{i}(t)}{h_{j}(t)} = \frac{ h_{0}(t) \times \text{exp}(\beta)}{h_{0}(t)} = \frac{ \cancel{h_{0}(t)}  \times \text{exp}(\beta)}{\cancel{h_{0}(t)}} = \text{exp}(\beta)
+$$
+
+Som vi kan se gælder det i første figur at: $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} = \theta$, mens det i det andet plot gælder at $\hat{HR} = \frac{h_{i}(t)}{h_{j}(t)} \neq \theta$. Bemærk at hazard raten ikke behøves at være konstant, da styrken ved Cox er at den er semi-parametrisk og kan håndtere forskellige **pdf**--ration skal bare være proportionel mellem de to grupper. Dvs. den kan godt varierer over tid, så længe variationen er "spejlet" i begge grupper. 
+
+::: {.columns} 
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "klik for at se koden"
+
+library(survival)
+library(tidyverse)
+
+# Konstruer random data
+set.seed(123) # Betyder vi får samme data
+n <- 1000 # Antal obs.
+Tid <- rexp(n, rate = 0.05) # Tidsenhed
+Begivenhed <- rbinom(n, size = 1, prob = 0.7) # Angiver hændelser, rate = 70%
+Gruppe <- factor(sample(1:2, size = n, replace = TRUE)) # Dummy-indikator for gruppetilhørsforhold
+
+# Fit en Cox PH model
+cox_model <- coxph(Surv(Tid, Begivenhed) ~ Gruppe)
+
+# Saml data i en df
+plot_data <- crossing(
+  Tid = seq(0, max(Tid), length.out = 100),
+  Gruppe = levels(Gruppe)
+)
+
+# Prediktér hazard funktionen, under antagelse af PH, som vi vil plotte
+plot_data <- plot_data %>%
+  mutate(hr_cox = predict(cox_model, newdata = ., type = "risk"))
+
+# Plot hazard funktionen
+ggplot(plot_data, aes(x = Tid, y = hr_cox, color = Gruppe)) +
+  geom_line() +
+  labs(title = "Hazard Funktion for to grupper med proportional effekt",
+       x = "Tid",
+       y = "Hazard rate") +
+  theme_minimal()
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "klik for at se koden"
+
+library(tidyverse)
+library(survival)
+
+# Introducér ikke-PH ved at tilføje en tids-afhængig effekt.  
+plot_data <- plot_data %>%
+  mutate(
+    hr_non_proportional = hr_cox,
+    hr_non_proportional = if_else(Gruppe == 2, hr_cox * exp(0.01 * Tid), hr_non_proportional)
+  )
+
+# Plot hazard funktionen med ikke-proportionel effekt 
+ggplot(plot_data, aes(x = Tid, y = hr_non_proportional, color = Gruppe)) +
+  geom_line() +
+  labs(title = "Hazard Funktion for to grupper med ikke-proportional effekt",
+       x = "Tid",
+       y = "Hazard rate") +
+  theme_minimal()
+```
+
+:::
+
+:::
+
+## `Tied data` 
+
+`Tied data` er almindelige i overlevelsesanalyse da vores tidsenhed typisk er **diskret**. Det betyder at der vil være flere hændelser/begivenheder/event i det samme tidsinterval. *Men*, det er principielt i uoverensstemmelse med den klassiske antagelse om uafhængighed mellem observationer, og kan derfor resultere i biased estimater og forkerte standardfejl, der har konsekvenser og validiteten af statistisk inferens. 
+
+Vi kan løse dette problem ved hjælp af tre forskellige standard-metoder: 
+
+- `Breslow`: god lille datasæt og få ties. 
+
+- `Efron`: håndterer bedre mange ties.
+
+- `Exact`: den bedste metode, men mest computerkrævende.
+
+
+## `Tied data`: Efron 
+
+Efron--*eller tied-discrete*--håndterer "tied event" ved at tage alle mulige rangeringer (*rank orderings*) af forbundne "failure times" inden for et sæt af forbundne observationer i betragtning. Denne metode justerer hvor meget forbundne begivenheder bidrager til likelihood funktionen.
+
+Ved anvendelse af Efron-metode kan vi bestemme hazard funktionen som: 
+
+$$
+h_{a}(t_{(i)}) = \frac{\sum_{j=1}^{d_i} \delta_{ij}}{\sum_{j \in R(t_{(i)})} \sum_{k=1}^{d_k} \exp(X_j'\beta) \times \delta_{ik}}
+$$
+
+hvor 
+
+- $h_{a}$ er den kontrollerede hazard funktion,
+- $i$ er indekset for den distinkte begivenhedstider, $t_{(i)}$, 
+- $j$ er indekset for individer som oplevede begivenheden ved $t_{(i)}$, 
+- $d_{i}$ er antallet af individer der oplevede begivenheden ved tid $t_{(i)}$, 
+- $R(t_{(i)})$ er `risikosættet` før $t_{(i)}$, der anvendes til at bestemme hazard funktionen ved $t_{(i)}$, 
+- $k$ er indekset for individer i `risikosættet`, $R(t_{(i)})$, før $t_{(i)}$, 
+- $\delta_{ij}$ er en dummy, der indikerer hvis individ $j$ oplevede begivenheden ved $t_{(i)}$ (1) eller ej (0),
+- $X_{j}$ er en vector af covariater for individ $j$, 
+- $\beta$ er en vector af coeficcienter i Cox PH modellen.
+
+## `Tied data`: Efron 
+
+Metoden tager alle mulige rangeringer af forbundne begivenheder i betragtning indenfor hvert sæt af forbundne begivenheder. Konkret justerer metoden hvor meget forbundne begivenheden bidrager til likelihood funktionen ved at summere, og i forlængelse normalisere, over alle mulige permutationer/rangeringer af forbundne begivenheder i et sæt af forbundne observationer. Vi kontrollerer derfor for den mulige usikkerhed ved at begivenheder er registreret som sammetidspunkt og for den potentielle tekniske tilstedeværelse af afhængighed mellem observationer. Outputtet er et "smoothed" estimat af hazard funktionen.  
+
+"Sættet" referer til en gruppe af individer, der oplevede en begivenhed ved det samme diskrete tidspunkt, og "alle mulige rangeringer referer til alle mulige måder vi kan sammensætte individerne i sættet. For eksempel: 
+
+- 3 personer, $A, B, C$, oplevede begivenheden ved $t=x$. 
+- Da vi arbejder med diskrete tidsenheder er der en række af mulige "korrekte" rækkefølger som A, B og C oplevede begivenheden i: 
+  - A først, så B, så C
+  - B, så C, så A, 
+  - osv. ...
+
+## `Tied data`: Efron 
+
+Ved at tage alle mulige rangeringer af begivenheder for en gruppe, der oplevede begivenheden, indefor et diskret tidspunkt i betragtning, sikrer metoden en mere korrekt likelihood funktion: 
+
+
+$$
+L(\beta) = \prod_{i=1}^m \frac{\exp\left(\sum_{j \in R(t_{(i)})} X_j'\beta \right)^{d_i}}{\left[\sum_{j \in R(t_{(i)})} \exp(X_j'\beta) \right]^{d_i}}
+$$
+
+hvor produktet over $i$ går fra 1 to $m$. $m$ er det samlede antal diskrete begivenhedstindspunkter. 
+
+Fordi vi kun tager de individer, $j$, der oplevede begivenheden i betragtning og ikke specificerer **baseline hazard** funktionen er det formelt en **partial likelihood** funktion. 
+
+## `Tied data`: Exact
+
+På mange måder ligner `Exact` metode Efron metoder. Den grundlæggende forskel er præcisionen i estimater (og den direkte relaterede computerkraft det kræver at være mere præcis). Med andre ord er $h(t)$ ikke bare "kontrollere"/adjusted som med Efron metoden, men *præcis*. 
+
+Hvor Efron kontrollerede for mulige permutationer af forbundne begivenheder indenfor et sæt af forbundne begivenheder, tager "exact" metode alle mulige permutationer i dataen (og ikke bare sættet) i betragtning og er derfor ikke afhængig af et "smoothed" estimat men giver et præcist estimat.
+
+## Cox PH med tidsvariende variable
+
+For at udvide Cox modellen med tidsvarierende covariate er der kun ganske få ændringer i formlen I er ved at være bekendt med: 
+
+$$
+h_{i}(t)=h_{0}(t) \times e^{\beta_{1} x_{1} + \beta_{2} x_{2}\textcolor{yellow}{(t)} + \dots + \beta_{k} x_{k}}
+$$
+Den eneste forskel er at vi tilføjer $t$ for de tidsvarierende covariater. I denne model er der én fixed og én tidsvarierende variabel og skal læses som at hazarden ved tid $t$ er bestem af $x_{1}$ og $x_{2}$ ***ved tid*** $t$. 
+
+## Cox PH med tidsvariende variable
+
+Nu gælder det at: 
+
+$$
+\hat{HR} = 
+\frac{h_{i}(t)}{h_{j}(t)} =
+\frac{h_{0}(t) \times \exp(\beta x_{i}\textcolor{yellow}{(t)})}{h_{0}(t) \times \exp(\beta x_{j}\textcolor{yellow}{(t)})}
+$$
+
+Med andre ord, hazardratioen bliver afhængig af tidspunktet.
+
+Selv om formlen kun indeholder en tidsvarierende variabel, så er der ikke noget til hinder for at ikke-tidsvarierende og tidsvarierende variable kombineres (Mills, s. 89). 
+
+Tolkningsmæssig, så er det, det samme som tidligere – bestemmelsen er anderledes.
+
+
+
+
+
+## Cox PH med tidsvariende variable: Data 
+
+```{mermaid}
+
+flowchart TD
+
+    X([<font size=6><font color=white> Afhængig <br/> variabel]) 
+
+    A([<font size=6><font color=black> Forklarende <br/> variabel]) 
+    -...-> B([<font size=6><font color=white>Tidsvariaende])
+    
+    A 
+    ---> C([<font size=6><font color=black>Konstant])
+    
+    B
+    --> D([<font size=6><font color=black> Variable der løber <br/> med tiden])
+    
+    B
+    --> E([<font size=6><font color=black>En variabel med forskellige <br/> værdier til forskellige <br/> tidspunkter])
+    
+    style A fill:#f45c2c,stroke:#111,stroke-width:1px
+    style B fill:#333,stroke:#111,stroke-width:1px
+    style C fill:#d8897b,stroke:#111,stroke-width:1px
+    style D fill:#9f6671,stroke:#111,stroke-width:1px
+    style E fill:#5e4f6d,stroke:#111,stroke-width:1px
+    
+
+```
+
+## Cox PH med tidsvariende variable: Data 
+
+```{mermaid}
+%%| fig-width: 15
+
+flowchart TD
+    B([<font size=6><font color=white>Tidsvariaende])
+    --> D([<font size=6><font color=black> Variable der løber <br/> med tiden])
+    
+    B
+    --> E([<font size=6><font color=black>En variabel med forskellige <br/> værdier til forskellige <br/> tidspunkter])
+    
+    D 
+    --- F([For eksempel alder])
+    
+    D 
+    -...- G([<font size=6><font color=black>Kan altid anvendes bestemmes <br/> ved start- og slutoplysninger])
+    
+    E
+    --- H([For eksempel arb. eller udd. status])
+    
+    E
+    -...- I([<font size=6><font color=black>Skal bestemmes for <br/> hvert tidspunkt])
+    
+    style B fill:#d8897b,stroke:#111,stroke-width:1px
+    style D fill:#9f6671,stroke:#111,stroke-width:1px
+    style E fill:#5e4f6d,stroke:#111,stroke-width:1px
+    style G fill:#b7bd50,stroke:#111,stroke-width:1px
+    style I fill:#b7bd50,stroke:#111,stroke-width:1px
+```
+
+## Cox PH med tidsvariende variable: Data 
+
+For at `coxph()` funktionen kan tage tidsvarierende informationer er det (desværre) ikke nok med periode_start og periode_slut. For hvert tidspunkt *og* person skal vi have start og slut information.  
+
+```{r}
+#| echo: false
+#| include: true
+figur_tekst_str = 15
+library(tidyverse)
+library(readxl)
+library(gt)
+
+df.rå <- read_excel("//Users//jeppefl//Desktop//forløbs-kursus//R//eksempel_data.xlsx")
+
+df.lagged <- 
+  df.rå %>% 
+  mutate(person_start = case_when(lag(id) == id ~ 0, TRUE ~ 1),
+         person_slut = case_when(lead(id) == id ~ 0, TRUE ~ 1)) %>% 
+  group_by(id) %>% 
+  mutate(begivenhed = if_else(lag(børn) == 0 & børn == 1 & person_start == 0, 1, 0),
+         periode_slut = case_when(begivenhed == 1 | børn == 0 & person_slut == 1 ~ 1, TRUE ~ 0)) %>% 
+  slice(1:which.max(periode_slut == 1)) %>% 
+  ungroup() 
+
+df.lagged %>% 
+  gt(groupname_col = "grp") %>% 
+  tab_header(
+    title = "Konstruér subject-period file",
+    subtitle = "Fiktive data"
+  ) %>% 
+  tab_options(table.width = pct(40),
+              table.font.size = figur_tekst_str) %>% 
+  opt_table_lines("none") %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "wheat")
+      ),
+    locations = cells_body(
+      columns = c(person_start, person_slut)
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "steelblue")
+      ),
+    locations = cells_body(
+      columns = begivenhed
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "lightblue")
+      ),
+    locations = cells_body(
+      columns = begivenhed,
+      rows = event == 1
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "pink")
+      ),
+    locations = cells_body(
+      columns = event,
+      rows = event == 1
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "lightgreen")
+      ),
+    locations = cells_body(
+      columns = periode_slut,
+      rows = periode_slut == 1 
+    )
+  )
+
+```
+
+
+
+## Cox PH med tidsvariende variable: Data 
+
+For at `coxph()` funktionen kan tage tidsvarierende informationer er det (desværre) ikke nok med periode_start og periode_slut. For hvert tidspunkt *og* person skal vi have start og slut information.  
+
+```{r}
+#| echo: false
+#| include: true
+figur_tekst_str = 15
+library(tidyverse)
+library(readxl)
+library(gt)
+
+df.rå <- read_excel("//Users//jeppefl//Desktop//forløbs-kursus//R//eksempel_data.xlsx")
+
+df.lagged <- 
+  df.rå %>% 
+  mutate(person_start = case_when(lag(id) == id ~ 0, TRUE ~ 1),
+         person_slut = case_when(lead(id) == id ~ 0, TRUE ~ 1)) %>% 
+  group_by(id) %>% 
+  mutate(begivenhed = if_else(lag(børn) == 0 & børn == 1 & person_start == 0, 1, 0),
+         periode_slut = case_when(begivenhed == 1 | børn == 0 & person_slut == 1 ~ 1, TRUE ~ 0)) %>% 
+  slice(1:which.max(periode_slut == 1)) %>% 
+  mutate(start = 1:n(),
+         slut = start + 1) %>% 
+  ungroup() 
+
+df.lagged %>% 
+  gt(groupname_col = "grp") %>% 
+  tab_header(
+    title = "Konstruér subject-period file",
+    subtitle = "Fiktive data"
+  ) %>% 
+  tab_options(table.width = pct(40),
+              table.font.size = figur_tekst_str) %>% 
+  opt_table_lines("none") %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "wheat")
+      ),
+    locations = cells_body(
+      columns = c(person_start, person_slut)
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "steelblue")
+      ),
+    locations = cells_body(
+      columns = begivenhed
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "lightblue")
+      ),
+    locations = cells_body(
+      columns = begivenhed,
+      rows = event == 1
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "pink")
+      ),
+    locations = cells_body(
+      columns = event,
+      rows = event == 1
+    )
+  ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "lightgreen")
+      ),
+    locations = cells_body(
+      columns = periode_slut,
+      rows = periode_slut == 1 
+    )
+  )
+
+```
+
+## Cox PH med tidsvariende variable: Data 
+
+For at `coxph()` funktionen kan tage tidsvarierende informationer er det (desværre) ikke nok med periode_start og periode_slut. For hvert tidspunkt *og* person skal vi have start og slut information. 
+
+```{.r code-line-numbers="14-15"}
+library(tidyverse)
+library(readxl)
+
+df.rå <- read_excel("//Users//jeppefl//Desktop//forløbs-kursus//R//eksempel_data.xlsx")
+
+df.lagged <- 
+  df.rå %>% 
+  mutate(person_start = case_when(lag(id) == id ~ 0, TRUE ~ 1),
+         person_slut = case_when(lead(id) == id ~ 0, TRUE ~ 1)) %>% 
+  group_by(id) %>% 
+  mutate(begivenhed = if_else(lag(børn) == 0 & børn == 1 & person_start == 0, 1, 0),
+         periode_slut = case_when(begivenhed == 1 | børn == 0 & person_slut == 1 ~ 1, TRUE ~ 0)) %>% 
+  slice(1:which.max(periode_slut == 1)) %>% 
+  mutate(start = 1:n(),
+         slut = start + 1) %>% 
+  ungroup() 
+  
+```
+
+## Cox PH med tidsvariende variable: Data 
+
+Disse to variable gør det muligt at udvide `coxph()` funktionen med: 
+
+```{.r code-line-numbers="14-15"}
+cox.model2 <- coxph(Surv(start, slut, event) ~ covariater, method = "efron", data = df)
+```
+
+Dette kalder vi også for et `Counting process` argument. 
+
+Her angives start og sluttiden for det enkelte interval, samt event (1=hændelse og 0=censurering). Intervallets størrelse afgøres af hvor hyppigt de tidsvarierende variable kan skifte værdi. Værdien skal være konstant inden for det enkelte interval. Denne lille ændring gør det muligt at håndtere tidsvarierende variable i cox-regressionen
+
+## Dagens øvelse: data
+
+```{.r}
+load("//Volumes//oecon-forloeb24//Råfiler//Forlob_14032023.rda")
+```
+
+![](Screenshot 2024-03-12 at 15.11.31.png)
+
+## Dagens øvelse: data
+
+```{.r}
+load("//Volumes//oecon-forloeb24//Råfiler//Forlob_14032023.rda")
+```
+
+**Oprindeligt**:
+- 1 % af alle individer fundet i IDAP igennem perioden 1980-2010
+
+**Reduktion**:
+- Data indeholder personer, der er fyldt 10 år mellem 1980-1990
+- Personer, der får børn før de er fyldt 18 år er taget ud af data (56 personer)
+- Kun personer, der er til stede i DK, det år de bliver 18 år.
+- Årlige observationer af disse personer
+
+## Øvelse - Første barn, fortsat
+
+1. Diskutér de forskellige variable i datasættet: 
+  - Er de tidsvarierende eller ej? 
+  - Vil det give mening at behandle nogle af variablene som faste (værdien på en tidsvarierende variable ved forløbets start) 
+2. Gør Forlob-datasættet klar til analyse
+  - Vær opmærksom på variabeltyperne (chr, num og factor) og hvordan I bruger dem i analysen 
+  - ALDER er en character variable
+3. Sæt udgangspunktet for forløbet til at være året, hvor personerne er 18 år
+4. Smid irrelevante observationsrække ud af datasættet (relevante obs er fra det 18. år frem til og med intervallet, hvor hændelsen sker eller observationen af personen slutter)
+5. Vælg minimum tre variable til analysen af problemstillingen (minimum 1 tidsvarierende)
+6. Lav indledende KM analyser for at undersøge forskelle mellem grupper.     
+    – plot KM-analyserne     
+    – Husk at begrænse datasættet til den sidste observation!     
+7. Lav en cox-regression, hvor tidsvarierende variable (mindst en) indgår, og fortolk resultaterne.
+    - Diskuter outputtet. Hvad giver mest mening at tolke på, coef eller exp(coef), hvorfor?
