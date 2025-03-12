@@ -162,14 +162,14 @@ beta <- 0.5
 
 # dataframe:
 df <- tibble(
-  time = t,
+  tid = t,
   h0 = 0.1 + 0.05 * sin(t), # Baseline hazard
   h1 = h0 * exp(beta),      # Hazard for gruppe i
   HR = h1 / h0              # Hazard-ratio mellem i og j
 )
 
 # Plot:
-p1 <- ggplot(df, aes(x = time)) +
+p1 <- ggplot(df, aes(x = tid)) +
   geom_line(aes(y = h0, color = "j"), size = 1.2) +
   geom_line(aes(y = h1, color = "i"), size = 1.2) +
   labs(x = "Time", y = "Hazard", title = "Proportionale Hazardfunktioner", color = "Gruppe") +
@@ -209,14 +209,14 @@ HR <- h2 / h0  # Dette svarer til exp(beta + gamma*t) ... altså, jeg har lavet 
 
 # Dataframe:
 df <- tibble(
-  time = t,
+  tid = t,
   h0 = h0,
   h2 = h2,
   HR = HR
 )
 
 # Plot:
-p1 <- ggplot(df, aes(x = time)) +
+p1 <- ggplot(df, aes(x = tid)) +
   geom_line(aes(y = h0, color = "j"), size = 1.2) +
   geom_line(aes(y = h2, color = "i"), size = 1.2) +
   labs(x = "Tid", y = "Hazard", title = "Ikke-Proportionale Hazardfunktioner", color = "Gruppe") +
@@ -273,6 +273,14 @@ p1 <- ggplot(df, aes(x = tid)) +
 
 p1
 
+# Plot:
+p2 <- ggplot(df, aes(x = tid, y = HR)) +
+  geom_line(color = "green", size = 1.2) +
+  labs(x = "Time", y = "Hazard Ratio", title = "Hazard Ratio (Konstant over tid)") +
+  theme_minimal()
+
+p2
+
 ```
 
 :::
@@ -290,25 +298,16 @@ library(tidyverse)
 # Tid:
 t <- seq(0, 10, by = 0.1)
 
-# Baseline hazard-funktion for referencegruppen, j:
-h0 <- 0.1 + 0.05 * sin(t)
-
 # Beta (effekten) + "gamma" (en tidsafhængig effekt der varierer over tid):
 beta <- 0.5
 gamma <- 0.2
 
-# Hazard-funktion for gruppe i med tidsafhængig ikke-proportional effekt:
-h2 <- h0 * exp(beta + gamma * t)
-
-# Hazard-ratioen:
-HR <- h2 / h0  # Dette svarer til exp(beta + gamma*t) ... altså, jeg har lavet en teoretisk funktion, der er ikke-proportionel over tid:
-
 # Dataframe:
 df <- tibble(
   tid = t,
-  h0 = h0,
-  h2 = h2,
-  HR = HR
+  h0 = 0.1 + 0.05 * sin(t),
+  h2 = h0 * exp(beta + gamma * t), # Hazard-funktion for gruppe i med tidsafhængig ikke-proportional effekt
+  HR = h2 / h0  # Dette svarer til exp(beta + gamma*t) ... altså, jeg har lavet en teoretisk funktion, der er ikke-proportionel over tid
 )
 
 # Plot:
@@ -319,6 +318,14 @@ p1 <- ggplot(df, aes(x = tid)) +
   theme_minimal()
 
 p1
+
+# Plot:
+p2 <- ggplot(df, aes(x = tid, y = HR)) +
+  geom_line(color = "green", size = 1.2) +
+  labs(x = "Tid", y = "Hazard Ratio", title = "Hazard Ratio (Ikke-konstant over tid)") +
+  theme_minimal()
+
+p2
 
 ```
 
@@ -398,7 +405,10 @@ For at udvide Cox modellen med tidsvarierende covariate er der kun ganske få æ
 $$
 h_{i}(t)=h_{0}(t) \times e^{\beta_{1} x_{1} + \beta_{2} x_{2}\textcolor{yellow}{(t)} + \dots + \beta_{k} x_{k}}
 $$
-Den eneste forskel er at vi tilføjer $t$ for de tidsvarierende covariater. I denne model er der én fixed og én tidsvarierende variabel og skal læses som at hazarden ved tid $t$ er bestem af $x_{1}$ og $x_{2}$ ***ved tid*** $t$. 
+
+Den eneste forskel er at vi tilføjer $t$ for de tidsvarierende covariater. 
+
+Her er $x_{2}(t)$ en tidsvarierende variabel, mens de øvrige $x$-variable er faste, og skal læses som at hazarden ved tid $t$ er bestemt af tidsinvariante karakteristika, $x_{1}$, og $x_{2}$ ***ved tid*** $t$. 
 
 ## Cox PH med tidsvariende variable
 
@@ -410,15 +420,131 @@ $$
 \frac{h_{0}(t) \times \exp(\beta x_{i}\textcolor{yellow}{(t)})}{h_{0}(t) \times \exp(\beta x_{j}\textcolor{yellow}{(t)})}
 $$
 
-Med andre ord, hazardratioen bliver afhængig af tidspunktet.
+Her ophæves $h_{0}(t)$ fortsat, men fordi $x_{i}(t)$ og $x_{j}(t)$ kan ændre sig over tid, bliver ***HR*** nu afhængig af tidspunktet:
 
-Selv om formlen kun indeholder en tidsvarierende variabel, så er der ikke noget til hinder for at ikke-tidsvarierende og tidsvarierende variable kombineres (Mills, s. 89). 
+Med andre ord, hazardratioen bliver afhængig af tidspunktet og kan variere over tid, hvis de tidsvarierende variable for de to personer ændrer sig:
 
-Tolkningsmæssig, så er det, det samme som tidligere – bestemmelsen er anderledes.
+$$
+\hat{HR} = \exp\left(\beta \left[x_i(t) - x_j(t)\right]\right)
+$$
 
+Det betyder, at hazard-ratioen i denne situation bliver tidsafhængig, fordi den afhænger af, hvordan den tidsvarierende variabel adskiller sig mellem personerne på et givet tidspunkt.
 
+## Cox PH med tidsvariende variable: proportionalitet?
 
+::: {.columns} 
 
+::: {.column width="50%"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "klik for at se koden"
+#| out-width: 80%
+
+library(tidyverse)
+
+# Tid
+t <- seq(0, 10, by = 0.1)
+
+# Beta: effekten af covariaten
+beta <- 0.5
+
+# Tidsvarierende covariater for de to grupper:
+# Gruppe i: x_i(t) = 1 + 0.1*t
+# Gruppe j: x_j(t) = 1 + 0.05*t
+x_i <- 1 + 0.1 * t
+x_j <- 1 + 0.05 * t
+
+# Beregn hazard for hver gruppe:
+h_i <- h0 * exp(beta * x_i)  # Hazard for gruppe i
+h_j <- h0 * exp(beta * x_j)  # Hazard for gruppe j
+
+# Opret en tibble med data
+df <- tibble(
+  tid = t,
+  h0 = 0.1 + 0.05 * sin(t),
+  `i` = h_i,
+  `j` = h_j,
+  HR = exp(beta * (x_i - x_j))
+)
+
+# Omform data til long format til ggplot
+df_long <- df %>% pivot_longer(cols = c("i", "j"),
+                               names_to = "Gruppe",
+                               values_to = "Hazard")
+
+# Plot:
+p1 <- ggplot(df_long, aes(x = tid, y = Hazard, color = Gruppe)) +
+  geom_line(size = 1.2) +
+  labs(title = "Hazardfunktioner over tid for to grupper",
+       x = "Tid",
+       y = "Hazard") +
+  theme_minimal()
+
+p1
+
+```
+
+:::
+
+::: {.column width="50%"}
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "klik for at se koden"
+#| out-width: 80%
+
+library(tidyverse)
+
+# Tid
+t <- seq(0, 10, by = 0.1)
+
+# Beta: effekten af covariaten
+beta <- 0.5
+
+# Tidsvarierende covariater for de to grupper:
+# Gruppe i: x_i(t) = 1 + 0.1*t
+# Gruppe j: x_j(t) = 1 + 0.05*t
+x_i <- 1 + 0.1 * t
+x_j <- 1 + 0.05 * t
+
+# Beregn hazard for hver gruppe:
+h_i <- h0 * exp(beta * x_i)  # Hazard for gruppe i
+h_j <- h0 * exp(beta * x_j)  # Hazard for gruppe j
+
+# Opret en tibble med data
+df <- tibble(
+  tid = t,
+  h0 = 0.1 + 0.05 * sin(t),
+  `i` = h_i,
+  `j` = h_j,
+  HR = exp(beta * (x_i - x_j))
+)
+
+# Omform data til long format til ggplot
+df_long <- df %>% pivot_longer(cols = c("i", "j"),
+                               names_to = "Gruppe",
+                               values_to = "Hazard")
+
+# Plot: 
+p2 <- ggplot(df, aes(x = tid, y = HR)) +
+  geom_line(color = "green", size = 1.2) +
+  labs(
+    title = "Tidsvarierende Hazard Ratio",
+    x = "Tid",
+    y = "Hazard Ratio, HR(t)"
+  ) +
+  theme_minimal()
+
+p2
+
+```
+
+:::
+
+:::
 
 ## Cox PH med tidsvariende variable: Data 
 
